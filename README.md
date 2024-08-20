@@ -5,6 +5,7 @@ All files from anonymous, No need for an Android emulator to decrypt alac
 ### 安装
 推荐Windows Subsystem for Linux (WSL)使用
 usage:  `./wrapper [port] ([username] [password])`
+get-m3u8为port+10000
 
 ```shell
 sudo -i
