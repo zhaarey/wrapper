@@ -113,7 +113,7 @@ static inline void init() {
     // raise(SIGSTOP);
     fprintf(stderr, "[+] starting...\n");
     setenv("ANDROID_DNS_MODE", "local", 1);
-    static const char *resolvers[2] = {"1.1.1.1", "1.0.0.1"};
+    static const char *resolvers[2] = {"1.1.1.1", "223.5.5.5"};
     _resolv_set_nameservers_for_net(0, resolvers, 2, ".");
 #ifndef MyRelease
     subhook_install(subhook_new(
