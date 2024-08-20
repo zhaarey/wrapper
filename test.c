@@ -458,11 +458,13 @@ void handle_m3u8(const int connfd) {
             readfull(connfd, &adam[i], sizeof(uint8_t));
         }
         char *ptr;
-        unsigned long adamID = strtoul(adam, &ptr, adamSize);
+        unsigned long adamID = strtoul(adam, &ptr, 10);
         const char *m3u8 = get_m3u8_method_play(leaseMgr, adamID);
         if (m3u8 == NULL) {
+            fprintf(stderr, "[.] failed to get m3u8 of adamId: %ld\n", adamID);
             writefull(connfd, NULL, sizeof(NULL));
         } else {
+            fprintf(stderr, "[.] m3u8 adamId: %ld, url: %s\n", adamID, m3u8);
             strcat((char *)m3u8, "\n");
             writefull(connfd, (void *)m3u8, strlen(m3u8));
         }
