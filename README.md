@@ -23,7 +23,7 @@ For best results, it's recommended to use **Windows Subsystem for Linux (WSL)**.
 #### Installation：
 ```shell
 sudo -i
-wget "https://github.com/zhaarey/wrapper/releases/download/linux/wrapper.linux.x86_64.V2.tar.gz"
+wget "https://github.com/zhaarey/wrapper/releases/download/linux.V2/wrapper.linux.x86_64.V2.tar.gz"
 mkdir wrapper
 tar -xzf wrapper.linux.x86_64.V2.tar.gz -C wrapper
 cd wrapper
