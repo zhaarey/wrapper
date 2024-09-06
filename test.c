@@ -7,19 +7,20 @@
 #include <unistd.h>
 #include <pthread.h>
 
+#include <arpa/inet.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
 
 #include "import.h"
+#include "cmdline.h"
 #ifndef MyRelease
 #include "subhook/subhook.c"
 #endif
 
 static struct shared_ptr apInf;
-static size_t passLen;
-static char *amUsername, *amPassword;
-static uint16_t port;
 static uint8_t leaseMgr[16];
+struct gengetopt_args_info args_info;
+char *amUsername, *amPassword;
 
 static void dialogHandler(long j, struct shared_ptr *protoDialogPtr,
                           struct shared_ptr *respHandler) {
@@ -75,6 +76,8 @@ static void credentialHandler(struct shared_ptr *credReqHandler,
             credReqHandler->obj)),
         need2FA ? "true" : "false");
 
+    int passLen = strlen(amPassword);
+
     if (need2FA) {
         printf("2FA code: ");
         scanf("%6s", amPassword + passLen);
@@ -113,7 +116,13 @@ static inline void init() {
     // raise(SIGSTOP);
     fprintf(stderr, "[+] starting...\n");
     setenv("ANDROID_DNS_MODE", "local", 1);
-    static const char *resolvers[2] = {"1.1.1.1", "223.5.5.5"};
+    if (args_info.proxy_given) {
+        fprintf(stderr, "[+] Using proxy %s", args_info.proxy_arg);
+        setenv("http_proxy", args_info.proxy_arg, 1);
+        setenv("https_proxy", args_info.proxy_arg, 1);
+    }
+
+    static const char *resolvers[2] = {"1.1.1.1", "1.0.0.1"};
     _resolv_set_nameservers_for_net(0, resolvers, 2, ".");
 #ifndef MyRelease
     subhook_install(subhook_new(
@@ -364,8 +373,6 @@ void handle(const int connfd) {
 }
 
 extern uint8_t handle_cpp(int);
-static char *selfPath;
-static char *portStr;
 
 inline static int new_socket() {
     const int fd = socket(AF_INET, SOCK_STREAM | SOCK_CLOEXEC, IPPROTO_TCP);
@@ -377,8 +384,8 @@ inline static int new_socket() {
     setsockopt(fd, SOL_SOCKET, SO_REUSEPORT, &optval, sizeof(optval));
 
     static struct sockaddr_in serv_addr = {.sin_family = AF_INET};
-    serv_addr.sin_addr.s_addr = htonl(INADDR_ANY);
-    serv_addr.sin_port = htons(port);
+    inet_pton(AF_INET, args_info.host_arg, &serv_addr.sin_addr);
+    serv_addr.sin_port = htons(args_info.decrypt_port_arg);
     if (bind(fd, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) == -1) {
         perror("bind");
         return EXIT_FAILURE;
@@ -389,8 +396,8 @@ inline static int new_socket() {
         return EXIT_FAILURE;
     }
 
-    fprintf(stderr, "[!] listening 0.0.0.0:%d\n", port);
-    close(STDOUT_FILENO);
+    fprintf(stderr, "[!] listening %s:%d\n", args_info.host_arg, args_info.decrypt_port_arg);
+    // close(STDOUT_FILENO);
 
     static struct sockaddr_in peer_addr;
     static socklen_t peer_addr_size = sizeof(peer_addr);
@@ -477,12 +484,11 @@ static inline void *new_socket_m3u8(void *args) {
         perror("socket");
     }
     const int optval = 1;
-    const int m3u8_port = port + 10000;
     setsockopt(fd, SOL_SOCKET, SO_REUSEPORT, &optval, sizeof(optval));
 
     static struct sockaddr_in serv_addr = {.sin_family = AF_INET};
-    serv_addr.sin_addr.s_addr = htonl(INADDR_ANY);
-    serv_addr.sin_port = htons(m3u8_port);
+    inet_pton(AF_INET, args_info.host_arg, &serv_addr.sin_addr);
+    serv_addr.sin_port = htons(args_info.m3u8_port_arg);
     if (bind(fd, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) == -1) {
         perror("bind");
     }
@@ -491,8 +497,8 @@ static inline void *new_socket_m3u8(void *args) {
         perror("listen");
     }
 
-    fprintf(stderr, "[!] listening m3u8 request on 0.0.0.0:%d\n", m3u8_port);
-    close(STDOUT_FILENO);
+    fprintf(stderr, "[!] listening m3u8 request on %s:%d\n", args_info.host_arg, args_info.m3u8_port_arg);
+    // close(STDOUT_FILENO);
 
     static struct sockaddr_in peer_addr;
     static socklen_t peer_addr_size = sizeof(peer_addr);
@@ -506,6 +512,7 @@ static inline void *new_socket_m3u8(void *args) {
                 errno == ENETUNREACH)
                 continue;
             perror("accept4");
+            
         }
 
         handle_m3u8(connfd);
@@ -517,23 +524,15 @@ static inline void *new_socket_m3u8(void *args) {
 }
 
 int main(int argc, char *argv[]) {
-    selfPath = argv[0];
-    if (argc != 2) {
-        if (argc != 4) {
-            fprintf(stderr, "usage: %s [port] ([username] [password])\n",
-                    argv[0]);
-            return EXIT_FAILURE;
-        }
-        amUsername = argv[2];
-        passLen = strlen(argv[3]);
-        amPassword = malloc(passLen + 7);
-        strcpy(amPassword, argv[3]);
-    }
-    port = atoi(portStr = argv[1]);
+    cmdline_parser(argc, argv, &args_info);
 
     init();
     const struct shared_ptr ctx = init_ctx();
-    if (argc == 4 && !login(ctx)) {
+    if (args_info.login_given) {
+        amUsername = strtok(args_info.login_arg, ":");
+        amPassword = strtok(NULL, ":");
+    }
+    if (args_info.login_given && !login(ctx)) {
         fprintf(stderr, "[!] login failed\n");
         return EXIT_FAILURE;
     }
@@ -545,7 +544,11 @@ int main(int argc, char *argv[]) {
     _ZN22SVPlaybackLeaseManager12requestLeaseERKb(leaseMgr, &autom);
     FHinstance = _ZN21SVFootHillSessionCtrl8instanceEv();
 
-    pthread_t m3u8_thread;
-    pthread_create(&m3u8_thread, NULL, &new_socket_m3u8, NULL);
+    if (args_info.m3u8_port_given) {
+        pthread_t m3u8_thread;
+        pthread_create(&m3u8_thread, NULL, &new_socket_m3u8, NULL);
+    } else {
+        fprintf(stderr, "[!] The feature of getting m3u8 is defaultly disabled because it's unstable now. To enable it, please manually specify m3u8-port param.\n");
+    }
     return new_socket();
 }

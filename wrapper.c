@@ -23,10 +23,6 @@ int main(int argc, char *argv[], char *envp[]) {
         return 1;
     }
 
-    if (argc > 2) {
-        system("rm -r ./rootfs/data/data/com.apple.android.music/files/");
-    }
-
     if (chdir("./rootfs") != 0) {
         perror("chdir");
         return 1;
