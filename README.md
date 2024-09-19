@@ -1,8 +1,9 @@
 ## Wrapper
 
-No need for an Android emulator to decrypt ALAC files. This solution works on all files from Anonymous.
+No need for an Android emulator to decrypt ALAC files. All files from anonymous.
 
 ### Recommended Environment
+#### x86_64 only
 For best results, it's recommended to use **Windows Subsystem for Linux (WSL)**.
 
 ---
