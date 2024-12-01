@@ -3,8 +3,12 @@
 No need for an Android emulator to decrypt ALAC files. All files from anonymous.
 
 ### Recommended Environment
-#### x86_64 only
+#### Only support Linux x86_64 and arm64.
 For best results, it's recommended to use **Windows Subsystem for Linux (WSL)**.
+
+# Special thanks
+- Anonymous, for providing the original version of this project and the legacy Frida decryption method.
+- chocomint, for providing support for arm64 arch.
 
 ---
 
@@ -21,22 +25,32 @@ For best results, it's recommended to use **Windows Subsystem for Linux (WSL)**.
   -P, --proxy=STRING       (default: `''`)
   -L, --login=STRING       ([username]:[password])
 ```
-#### Installation：
+#### Installation x86_64：
 ```shell
 sudo -i
-wget "https://github.com/zhaarey/wrapper/releases/download/linux.V2/wrapper.linux.x86_64.V2.tar.gz"
+wget "https://github.com/zhaarey/wrapper/releases/download/linux.V2/wrapper.x86_64.tar.gz"
 mkdir wrapper
-tar -xzf wrapper.linux.x86_64.V2.tar.gz -C wrapper
+tar -xzf wrapper.x86_64.tar.gz -C wrapper
 cd wrapper
 ./wrapper
 ```
+#### Installation arm64：
+```shell
+sudo -i
+wget "https://github.com/zhaarey/wrapper/releases/download/arm64/wrapper.arm64.tar.gz"
+mkdir wrapper
+tar -xzf wrapper.arm64.tar.gz -C wrapper
+cd wrapper
+./wrapper
+```
+
 
 
 ---
 ### Version 1
 #### Usage:
 `./wrapper [port] ([username] [password])`
-#### Installation：
+#### Installation only x86_64：
 ```shell
 sudo -i
 wget "https://github.com/zhaarey/wrapper/releases/download/linux/wrapper.linux.x86_64.tar.gz"
