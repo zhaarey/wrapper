@@ -89,3 +89,4 @@ rootfs/
 .vscode/
 wrapper
 rootfs/system/bin/linker64
+build/

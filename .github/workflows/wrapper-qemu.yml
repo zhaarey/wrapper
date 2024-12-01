@@ -13,7 +13,7 @@ jobs:
        - uses: actions/checkout@v4
 
        - name: Download wrapper-qemu basic image
-         run: wget https://github.com/zhaarey/wrapper/releases/download/wrapper-qemu/wrapper.qcow2
+         run: wget https://github.com/WorldObservationLog/wrapper/releases/download/wrapper-qemu/wrapper.qcow2
 
        - name: Mount image
          run: |
