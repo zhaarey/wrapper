@@ -47,3 +47,5 @@ jobs:
         path: |
           rootfs
           wrapper
+          Dockerfile
+
