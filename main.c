@@ -10,6 +10,7 @@
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
+#include <sys/stat.h>
 
 #include "import.h"
 #include "cmdline.h"
@@ -21,6 +22,11 @@ static struct shared_ptr apInf;
 static uint8_t leaseMgr[16];
 struct gengetopt_args_info args_info;
 char *amUsername, *amPassword;
+
+int file_exists(char *filename) {
+  struct stat buffer;   
+  return (stat (filename, &buffer) == 0);
+}
 
 static void dialogHandler(long j, struct shared_ptr *protoDialogPtr,
                           struct shared_ptr *respHandler) {
@@ -79,8 +85,32 @@ static void credentialHandler(struct shared_ptr *credReqHandler,
     int passLen = strlen(amPassword);
 
     if (need2FA) {
-        printf("2FA code: ");
-        scanf("%6s", amPassword + passLen);
+        if (args_info.code_from_file_flag) {
+            fprintf(stderr, "[!] Enter your 2FA code into rootfs/data/code.txt\n");
+            fprintf(stderr, "[!] Example command: echo -n 114514 > rootfs/data/2fa.txt\n");
+            fprintf(stderr, "[!] Waiting for input...\n");
+            int count = 0;
+            while (1)
+            {
+                if (count >= 20) {
+                    fprintf(stderr, "[!] Failed to get 2FA Code in 60s. Exiting...\n");
+                    exit(0);
+                }
+                if (file_exists("/data/2fa.txt")) {
+                    FILE *fp = fopen("/data/2fa.txt", "r");
+                    fscanf(fp, "%6s", amPassword + passLen);
+                    remove("/data/2fa.txt");
+                    fprintf(stderr, "[!] Code file detected! Logging in...\n");
+                    break;
+                } else {
+                    sleep(3);
+                    count++;
+                }
+            }
+        } else {
+            printf("2FA code: ");
+            scanf("%6s", amPassword + passLen);
+        }
     }
 
     uint8_t *const ptr = malloc(80);
@@ -435,16 +465,18 @@ inline static int new_socket() {
 const char* get_m3u8_method_play(uint8_t leaseMgr[16], unsigned long adam) {
     union std_string HLS = new_std_string_short_mode("HLS");
     struct std_vector HLSParam = new_std_vector(&HLS);
-    static uint8_t z0 = 1;
-    struct shared_ptr *ptr_result = (struct shared_ptr *) malloc(32);
+    static uint8_t z0 = 0;
+    struct shared_ptr ptr_result;
     _ZN22SVPlaybackLeaseManager12requestAssetERKmRKNSt6__ndk16vectorINS2_12basic_stringIcNS2_11char_traitsIcEENS2_9allocatorIcEEEENS7_IS9_EEEERKb(
-        ptr_result, leaseMgr, &adam, &HLSParam, &z0
+        &ptr_result, leaseMgr, &adam, &HLSParam, &z0
     );
-    if (_ZNK23SVPlaybackAssetResponse13hasValidAssetEv(ptr_result->obj)) {
-        struct shared_ptr *playbackAsset = _ZNK23SVPlaybackAssetResponse13playbackAssetEv(ptr_result->obj);
-        union std_string *m3u8 = (union std_string *) malloc(24);
-        _ZNK17storeservicescore13PlaybackAsset9URLStringEv(m3u8, playbackAsset->obj);
-        return std_string_data(m3u8);
+    if (_ZNK23SVPlaybackAssetResponse13hasValidAssetEv(ptr_result.obj)) {
+        struct shared_ptr *playbackAsset = _ZNK23SVPlaybackAssetResponse13playbackAssetEv(ptr_result.obj);
+        union std_string *m3u8 = malloc(24);
+        void *playbackObj = playbackAsset->obj;
+        _ZNK17storeservicescore13PlaybackAsset9URLStringEv(m3u8, playbackObj);
+        const char *m3u8_str = std_string_data(m3u8);
+        return m3u8_str;
     } else {
         return NULL;
     }

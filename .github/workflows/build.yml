@@ -27,6 +27,9 @@ jobs:
       
     - name: Build
       run: |
+        mkdir build
+        cd build
+        cmake ..
         make
 
     - name: Set outputs
@@ -41,3 +44,6 @@ jobs:
         path: |
           rootfs
           wrapper
+          Dockerfile
+        
+

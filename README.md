@@ -11,6 +11,16 @@ For best results, it's recommended to use **Windows Subsystem for Linux (WSL)**.
 - chocomint, for providing support for arm64 arch.
 
 ---
+### Version 2 Docker
+Available for x86_64 and arm64. Need to download prebuilt version from releases or actions.
+
+Build image: `docker build --tag wrapper .`
+
+Login: `docker run -v ./rootfs/data:/app/rootfs/data -p 10020:10020 -e args="-L username:password -F -H 0.0.0.0" wrapper`
+
+Run: `docker run -v ./rootfs/data:/app/rootfs/data -p 10020:10020 -e args="-H 0.0.0.0" wrapper`
+
+
 
 ### Version 2
 
