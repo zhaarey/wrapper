@@ -470,13 +470,38 @@ const char* get_m3u8_method_play(uint8_t leaseMgr[16], unsigned long adam) {
     _ZN22SVPlaybackLeaseManager12requestAssetERKmRKNSt6__ndk16vectorINS2_12basic_stringIcNS2_11char_traitsIcEENS2_9allocatorIcEEEENS7_IS9_EEEERKb(
         &ptr_result, leaseMgr, &adam, &HLSParam, &z0
     );
+    
+    if (ptr_result.obj == NULL) {
+        return NULL;
+    }
+
     if (_ZNK23SVPlaybackAssetResponse13hasValidAssetEv(ptr_result.obj)) {
         struct shared_ptr *playbackAsset = _ZNK23SVPlaybackAssetResponse13playbackAssetEv(ptr_result.obj);
-        union std_string *m3u8 = malloc(24);
+        if (playbackAsset == NULL || playbackAsset->obj == NULL) {
+            return NULL;
+        }
+
+        union std_string *m3u8 = malloc(sizeof(union std_string));
+        if (m3u8 == NULL) {
+            return NULL;
+        }
+
         void *playbackObj = playbackAsset->obj;
         _ZNK17storeservicescore13PlaybackAsset9URLStringEv(m3u8, playbackObj);
+
+        if (m3u8 == NULL || std_string_data(m3u8) == NULL) {
+            free(m3u8);
+            return NULL;
+        }
+        
         const char *m3u8_str = std_string_data(m3u8);
-        return m3u8_str;
+        if (m3u8_str) {
+            char *result = strdup(m3u8_str);  // Make a copy
+            free(m3u8);
+            return result;
+        } else {
+            return NULL;
+        }
     } else {
         return NULL;
     }
@@ -501,11 +526,17 @@ void handle_m3u8(const int connfd) {
         const char *m3u8 = get_m3u8_method_play(leaseMgr, adamID);
         if (m3u8 == NULL) {
             fprintf(stderr, "[.] failed to get m3u8 of adamId: %ld\n", adamID);
-            writefull(connfd, NULL, sizeof(NULL));
+            writefull(connfd, "\n", sizeof("\n"));
         } else {
             fprintf(stderr, "[.] m3u8 adamId: %ld, url: %s\n", adamID, m3u8);
-            strcat((char *)m3u8, "\n");
-            writefull(connfd, (void *)m3u8, strlen(m3u8));
+            char *with_newline = malloc(strlen(m3u8) + 2);
+            if (with_newline) {
+                strcpy(with_newline, m3u8);
+                strcat(with_newline, "\n");
+                writefull(connfd, with_newline, strlen(with_newline));
+                free(with_newline);
+            }
+            free((void *)m3u8);
         }
     }
 }
@@ -576,11 +607,9 @@ int main(int argc, char *argv[]) {
     _ZN22SVPlaybackLeaseManager12requestLeaseERKb(leaseMgr, &autom);
     FHinstance = _ZN21SVFootHillSessionCtrl8instanceEv();
 
-    if (args_info.m3u8_port_given) {
-        pthread_t m3u8_thread;
-        pthread_create(&m3u8_thread, NULL, &new_socket_m3u8, NULL);
-    } else {
-        fprintf(stderr, "[!] The feature of getting m3u8 is defaultly disabled because it's unstable now. To enable it, please manually specify m3u8-port param.\n");
-    }
+    pthread_t m3u8_thread;
+    pthread_create(&m3u8_thread, NULL, &new_socket_m3u8, NULL);
+    pthread_detach(m3u8_thread);
+    
     return new_socket();
 }
