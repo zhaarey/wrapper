@@ -1,5 +1,7 @@
 ## Wrapper
 
+### This project is a bit outdated. We recommend using [WorldObservationLog/wrapper](https://github.com/WorldObservationLog/wrapper) instead.
+
 No need for an Android emulator to decrypt ALAC files. All files from anonymous.
 
 ### Recommended Environment
